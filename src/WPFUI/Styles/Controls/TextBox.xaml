@@ -81,6 +81,8 @@
             </Setter.Value>
         </Setter>
     </Style>
+    
+    
 
     <Style BasedOn="{StaticResource UiTextBoxBase}" TargetType="{x:Type TextBox}" />
 
@@ -112,6 +114,7 @@
         <Setter Property="FontSize" Value="14" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="Validation.ErrorTemplate" Value="{x:Null}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type controls:TextBox}">
@@ -203,6 +206,11 @@
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconRight" Property="Visibility" Value="Visible" />
                         </MultiDataTrigger>
+
+                        <Trigger Property="Validation.HasError" Value="True">
+                            <Setter TargetName="BottomBorder" Property="BorderBrush" Value="#cc0000"/>
+                        </Trigger>
+                        
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
