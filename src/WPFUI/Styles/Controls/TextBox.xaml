@@ -21,7 +21,7 @@
 
     <!--  Animate bottom border brush  -->
 
-    <Style x:Key="UiTextBoxBase" TargetType="{x:Type TextBox}">
+    <Style TargetType="{x:Type TextBox}">
         <Setter Property="Foreground">
             <Setter.Value>
                 <SolidColorBrush Color="{DynamicResource TextFillColorPrimary}" />
@@ -39,7 +39,6 @@
         </Setter>
         <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
         <Setter Property="ContextMenu" Value="{StaticResource UiTextBoxContextMenu}" />
-        <Setter Property="MinHeight" Value="34" />
         <Setter Property="Padding" Value="6,4" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
@@ -64,8 +63,7 @@
                             <ScrollViewer
                                 x:Name="PART_ContentHost"
                                 Margin="0"
-                                Padding="0"
-                                VerticalAlignment="Center" />
+                                Style="{DynamicResource UiScrollViewer}" />
                         </Border>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -84,9 +82,7 @@
     
     
 
-    <Style BasedOn="{StaticResource UiTextBoxBase}" TargetType="{x:Type TextBox}" />
-
-    <Style x:Key="UiTextBox" TargetType="{x:Type controls:TextBox}">
+    <Style TargetType="{x:Type controls:TextBox}">
         <Setter Property="Foreground">
             <Setter.Value>
                 <SolidColorBrush Color="{DynamicResource TextFillColorPrimary}" />
@@ -109,7 +105,6 @@
         </Setter>
         <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
         <Setter Property="ContextMenu" Value="{StaticResource UiTextBoxContextMenu}" />
-        <Setter Property="MinHeight" Value="34" />
         <Setter Property="Padding" Value="6,4" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
@@ -153,13 +148,12 @@
                                     <ScrollViewer
                                         x:Name="PART_ContentHost"
                                         Margin="0"
-                                        Padding="0"
-                                        VerticalAlignment="Center" />
+                                        Style="{DynamicResource UiScrollViewer}"/>
                                     <TextBlock
                                         x:Name="Placeholder"
                                         Margin="0"
-                                        Padding="7,5,0,0"
-                                        VerticalAlignment="Top"
+                                        Padding="7,0,0,0"
+                                        VerticalAlignment="Center"
                                         Text="{TemplateBinding Placeholder}">
                                         <TextBlock.Foreground>
                                             <SolidColorBrush Color="{DynamicResource TextFillColorTertiary}" />
@@ -216,7 +210,5 @@
             </Setter.Value>
         </Setter>
     </Style>
-
-    <Style BasedOn="{StaticResource UiTextBox}" TargetType="{x:Type controls:TextBox}" />
 
 </ResourceDictionary>
