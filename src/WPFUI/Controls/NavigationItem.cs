@@ -6,22 +6,23 @@
 using System;
 using System.ComponentModel;
 using System.Windows;
-using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using WPFUI.Common;
 using WPFUI.Controls.Interfaces;
+using WPFUI.Controls.Navigation;
+using WPFUI.Extensions;
 
 namespace WPFUI.Controls;
 
 /// <summary>
 /// Navigation element.
 /// </summary>
-public class NavigationItem : System.Windows.Controls.Primitives.ButtonBase, INavigationItem, IIconControl
+public class NavigationItem : System.Windows.Controls.Primitives.ButtonBase, IUriContext, INavigationItem, INavigationControl, IIconControl
 {
-    private static readonly Type WindowsPage = typeof(System.Windows.Controls.Page);
-
-    private Type _pageType = null;
-
     /// <summary>
     /// Property for <see cref="PageTag"/>.
     /// </summary>
@@ -29,10 +30,28 @@ public class NavigationItem : System.Windows.Controls.Primitives.ButtonBase, INa
         typeof(string), typeof(NavigationItem), new PropertyMetadata(String.Empty));
 
     /// <summary>
+    /// Property for <see cref="PageSource"/>.
+    /// </summary>
+    public static readonly DependencyProperty PageSourceProperty = DependencyProperty.Register(nameof(PageSource),
+        typeof(Uri), typeof(NavigationItem), new PropertyMetadata((Uri)null, OnPageSourceChanged));
+
+    /// <summary>
+    /// Property for <see cref="PageType"/>.
+    /// </summary>
+    public static readonly DependencyProperty PageTypeProperty = DependencyProperty.Register(nameof(PageType),
+        typeof(Type), typeof(NavigationItem), new PropertyMetadata((Type)null, OnPageTypeChanged));
+
+    /// <summary>
     /// Property for <see cref="IsActive"/>.
     /// </summary>
     public static readonly DependencyProperty IsActiveProperty = DependencyProperty.Register(nameof(IsActive),
         typeof(bool), typeof(NavigationItem), new PropertyMetadata(false));
+
+    /// <summary>
+    /// Property for <see cref="Cache"/>.
+    /// </summary>
+    public static readonly DependencyProperty CacheProperty = DependencyProperty.Register(nameof(Cache),
+        typeof(bool), typeof(NavigationItem), new PropertyMetadata(true));
 
     /// <summary>
     /// Property for <see cref="Icon"/>.
@@ -88,6 +107,21 @@ public class NavigationItem : System.Windows.Controls.Primitives.ButtonBase, INa
     }
 
     /// <inheritdoc />
+    public Uri PageSource
+    {
+        get => (Uri)GetValue(PageSourceProperty);
+        set => SetValue(PageSourceProperty, value);
+
+    }
+
+    /// <inheritdoc />
+    public Type PageType
+    {
+        get => (Type)GetValue(PageTypeProperty);
+        set => SetValue(PageSourceProperty, value);
+    }
+
+    /// <inheritdoc />
     public bool IsActive
     {
         get => (bool)GetValue(IsActiveProperty);
@@ -102,6 +136,13 @@ public class NavigationItem : System.Windows.Controls.Primitives.ButtonBase, INa
 
             SetValue(IsActiveProperty, value);
         }
+    }
+
+    /// <inheritdoc />
+    public bool Cache
+    {
+        get => (bool)GetValue(CacheProperty);
+        set => SetValue(CacheProperty, value);
     }
 
     /// <inheritdoc />
@@ -147,6 +188,7 @@ public class NavigationItem : System.Windows.Controls.Primitives.ButtonBase, INa
     /// <summary>
     /// Gets or sets image displayed next to the card name instead of the icon.
     /// </summary>
+    [Bindable(true), Category("Appearance")]
     public BitmapSource Image
     {
         get => GetValue(ImageProperty) as BitmapSource;
@@ -171,25 +213,24 @@ public class NavigationItem : System.Windows.Controls.Primitives.ButtonBase, INa
         remove => RemoveHandler(DeactivatedEvent, value);
     }
 
-    /// <inheritdoc/>
-    public bool IsValid => !String.IsNullOrEmpty(PageTag) && Page != null;
+    /// <inheritdoc />
+    [Bindable(false)]
+    public Uri AbsolutePageSource { get; internal set; }
 
-    /// <inheritdoc/>
-    public Page Instance { get; set; } = null;
-
-    /// <inheritdoc/>
-    public Type Page
+    /// <inheritdoc />
+    Uri IUriContext.BaseUri
     {
-        get => _pageType;
+        get => BaseUri;
+        set => BaseUri = value;
+    }
 
-        set
-        {
-            if (value.IsAssignableFrom(WindowsPage))
-                throw new ArgumentException(
-                    "Page of NavigationItem must be inherited from System.Windows.Controls.Page");
-
-            _pageType = value;
-        }
+    /// <summary>
+    /// Implementation for BaseUri.
+    /// </summary>
+    protected virtual Uri BaseUri
+    {
+        get => (Uri)GetValue(BaseUriHelper.BaseUriProperty);
+        set => SetValue(BaseUriHelper.BaseUriProperty, value);
     }
 
     /// <inheritdoc />
@@ -197,16 +238,142 @@ public class NavigationItem : System.Windows.Controls.Primitives.ButtonBase, INa
     {
         base.OnContentChanged(oldContent, newContent);
 
-        if (newContent is String && String.IsNullOrEmpty(PageTag))
-            PageTag = newContent?.ToString()?.ToLower()?.Trim() ?? (Page != null ? Page.ToString().ToLower().Trim() : String.Empty);
+        if (newContent is string && String.IsNullOrEmpty(PageTag))
+            PageTag = newContent?.ToString()?.ToLower()?.Trim() ?? String.Empty;
     }
 
     /// <inheritdoc/>
-    public void SetContext(object dataContext)
+    protected override void OnKeyDown(KeyEventArgs e)
     {
-        if (Instance == null)
+        if (Keyboard.Modifiers is not ModifierKeys.None)
+        {
+            // We handle Left/Up/Right/Down keys for keyboard navigation only,
+            // so no modifiers are needed.
+            return;
+        }
+
+        switch (e.Key)
+        {
+            // We use Direction Left/Up/Right/Down instead of Previous/Next to make sure
+            // that the KeyboardNavigation.DirectionalNavigation property works correctly.
+            case Key.Left:
+                MoveFocus(this, FocusNavigationDirection.Left);
+                e.Handled = true;
+                break;
+
+            case Key.Up:
+                MoveFocus(this, FocusNavigationDirection.Up);
+                e.Handled = true;
+                break;
+
+            case Key.Right:
+                MoveFocus(this, FocusNavigationDirection.Right);
+                e.Handled = true;
+                break;
+
+            case Key.Down:
+                MoveFocus(this, FocusNavigationDirection.Down);
+                e.Handled = true;
+                break;
+
+            case Key.Space:
+            case Key.Enter:
+
+                // Item doesn't define a page, skip navigation.
+                if (PageSource == null && PageType == null)
+                    break;
+
+                if (NavigationBase.GetNavigationParent(this) is { } navigation
+                    && PageTag is { } pageTag
+                    && !String.IsNullOrEmpty(pageTag))
+                {
+                    e.Handled = true;
+
+                    navigation.Navigate(pageTag);
+                }
+                break;
+        }
+
+        // If it is simply treated as a button, pass the information about the click on.
+        if (!e.Handled)
+            base.OnKeyDown(e);
+
+        static void MoveFocus(FrameworkElement element, FocusNavigationDirection direction)
+        {
+            var request = new TraversalRequest(direction);
+            element.MoveFocus(request);
+        }
+    }
+
+    /// <summary>
+    /// This virtual method is called when <see cref="Uri"/> of the selected page is changed.
+    /// </summary>
+    protected virtual void OnPageSourceChanged(Uri pageUri)
+    {
+        if (!pageUri.OriginalString.EndsWith(".xaml"))
+            throw new ArgumentException($"URI in {typeof(NavigationItem)} must point to the XAML Page.");
+
+        AbsolutePageSource = ResolvePageUri(pageUri);
+    }
+
+    private static void OnPageSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not NavigationItem navigationItem)
             return;
 
-        Instance.DataContext = dataContext;
+        navigationItem.OnPageSourceChanged(e.NewValue as Uri);
+    }
+
+    /// <summary>
+    /// This virtual method is called when <see cref="Type"/> of the selected page is changed.
+    /// </summary>
+    protected virtual void OnPageTypeChanged(Type pageType)
+    {
+        if (!typeof(System.Windows.FrameworkElement).IsAssignableFrom(pageType))
+            throw new ArgumentException($"{pageType} is not inherited from {typeof(System.Windows.FrameworkElement)}.");
+    }
+
+    private static void OnPageTypeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not NavigationItem navigationItem)
+            return;
+
+        navigationItem.OnPageTypeChanged(e.NewValue as Type);
+    }
+
+    /// <summary>
+    /// Tries to resolve absolute path to the Page template.
+    /// </summary>
+    private Uri ResolvePageUri(Uri pageUri)
+    {
+        if (pageUri == null || pageUri.IsAbsoluteUri)
+            return pageUri;
+
+        if (!pageUri.EndsWith(".xaml"))
+            throw new ArgumentException("PageSource must point to the .xaml file.");
+
+        var baseUri = BaseUri;
+
+        if (baseUri == null)
+        {
+            // TODO: Force extracting BaseUri for Designer
+            // This is a hackery solution that needs to be refined.
+
+            if (!DesignerHelper.IsInDesignMode)
+                throw new UriFormatException("Unable to resolve absolute URI for selected page");
+
+            // The navigation simply prints a blank page during the design process.
+            PageType = typeof(System.Windows.Controls.Page);
+
+            return null;
+        }
+
+        if (!baseUri.IsAbsoluteUri)
+            throw new ApplicationException("Unable to resolve base URI for selected page");
+
+        if (baseUri.EndsWith(".xaml"))
+            baseUri = baseUri.TrimLastSegment();
+
+        return baseUri.Append(pageUri);
     }
 }

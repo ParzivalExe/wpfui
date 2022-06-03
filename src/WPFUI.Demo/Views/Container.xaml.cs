@@ -14,12 +14,20 @@ namespace WPFUI.Demo.Views;
 /// <summary>
 /// Interaction logic for Container.xaml
 /// </summary>
-public partial class Container : Window
+public partial class Container
 {
     public Container()
     {
         InitializeComponent();
         InitializeUi();
+
+        RemoveTitlebar();
+        ApplyBackdrop(WPFUI.Appearance.BackgroundType.Mica);
+
+        //this
+        //    .GandalfDoMagic()
+        //    .ApplyDefaultBackground()
+        //    .ApplyCorners(WindowCornerPreference.Round);
 
         InvokeSplashScreen();
     }
@@ -41,7 +49,7 @@ public partial class Container : Window
             //    Page = typeof(Pages.Debug),
             //    Content = "Debug",
             //    Icon = WPFUI.Common.SymbolRegular.Warning24,
-            //    IconForeground = Brushes.Red,
+            //    IconForeground = System.Windows.Media.Brushes.Red,
             //    IconFilled = true
             //});
 #endif
@@ -63,6 +71,8 @@ public partial class Container : Window
             {
                 RootWelcomeGrid.Visibility = Visibility.Hidden;
                 RootMainGrid.Visibility = Visibility.Visible;
+
+                RootNavigation.Navigate(0);
             });
         });
     }

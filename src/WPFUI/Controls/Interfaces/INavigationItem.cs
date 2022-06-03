@@ -16,44 +16,43 @@ namespace WPFUI.Controls.Interfaces;
 public interface INavigationItem
 {
     /// <summary>
-    /// Represents a text page identifier that can be navigated with <see cref="INavigation.Navigate(string, bool, object)"/>.
+    /// Represents a text page identifier that can be navigated with <see cref="INavigation.Navigate(string, object)"/>.
     /// </summary>
-    public string PageTag { get; set; }
+    string PageTag { get; set; }
 
     /// <summary>
     /// Content is the data used to generate the child elements of this control.
     /// </summary>
-    public object Content { get; }
-
-    /// <summary>
-    /// Gets information whether the page has a tag and type.
-    /// </summary>
-    public bool IsValid { get; }
+    object Content { get; }
 
     /// <summary>
     /// Gets information whether the current element is active.
     /// </summary>
-    public bool IsActive { get; set; }
+    bool IsActive { get; set; }
 
     /// <summary>
-    /// Instance of <see cref="System.Windows.Controls.Page"/>.
+    /// Determines whether an <see cref="Page"/> should be cached.
     /// </summary>
-    public Page Instance { get; set; }
+    bool Cache { get; set; }
 
     /// <summary>
-    /// <see cref="System.Windows.Controls.Page"/> type.
+    /// URI of the application or content being navigated to.
     /// </summary>
-    public Type Page { get; set; }
+    Uri PageSource { get; set; }
+
+    /// <summary>
+    /// A <see cref="Type"/> inherited from <see cref="Page"/> that defines page of the item.
+    /// </summary>
+    Type PageType { get; set; }
+
+    /// <summary>
+    /// Absolute path to the Page XAML template.
+    /// </summary>
+    Uri AbsolutePageSource { get; }
 
     /// <summary>
     /// Add / Remove ClickEvent handler
     /// </summary>
     [Category("Behavior")]
-    public event RoutedEventHandler Click;
-
-    /// <summary>
-    /// Tires to set the DataContext for the selected page.
-    /// </summary>
-    /// <param name="dataContext">Data context to be set.</param>
-    public void SetContext(object dataContext);
+    event RoutedEventHandler Click;
 }

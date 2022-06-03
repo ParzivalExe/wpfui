@@ -3,8 +3,11 @@
 // Copyright (C) Leszek Pomianowski and WPF UI Contributors.
 // All Rights Reserved.
 
-using System.Collections.ObjectModel;
-using System.Windows.Controls;
+using System;
+using System.Collections.Generic;
+using System.Windows;
+using System.Windows.Media;
+using WPFUI.Common;
 
 namespace WPFUI.Demo.Views.Pages;
 
@@ -26,20 +29,56 @@ public class Customer
     public OrderStatus Status { get; set; }
 }
 
+public class DataViewData : ViewData
+{
+    private IEnumerable<string> _listBoxItemCollection = new string[] { };
+    public IEnumerable<string> ListBoxItemCollection
+    {
+        get => _listBoxItemCollection;
+        set => UpdateProperty(ref _listBoxItemCollection, value, nameof(ListBoxItemCollection));
+    }
+
+    private IEnumerable<Customer> _dataGridItemCollection = new Customer[] { };
+    public IEnumerable<Customer> DataGridItemCollection
+    {
+        get => _dataGridItemCollection;
+        set => UpdateProperty(ref _dataGridItemCollection, value, nameof(DataGridItemCollection));
+    }
+
+    private IEnumerable<Brush> _brushCollection = new Brush[] { };
+    public IEnumerable<Brush> BrushCollection
+    {
+        get => _brushCollection;
+        set => UpdateProperty(ref _brushCollection, value, nameof(BrushCollection));
+    }
+}
+
 /// <summary>
 /// Interaction logic for Data.xaml
 /// </summary>
-public partial class Data : Page
+public partial class Data
 {
-    public ObservableCollection<string> ListBoxItemCollection { get; set; }
-    public ObservableCollection<Customer> DataGridItemCollection { get; set; }
+    internal DataViewData _data;
 
 
     public Data()
     {
         InitializeComponent();
+        InitializeContent();
+        Loaded += OnLoaded;
+    }
 
-        ListBoxItemCollection = new ObservableCollection<string>()
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        RootPanel.ScrollOwner = ScrollHost;
+    }
+
+    private void InitializeContent()
+    {
+        _data = new DataViewData();
+        DataContext = _data;
+
+        _data.ListBoxItemCollection = new List<string>()
         {
             "Somewhere over the rainbow",
             "Way up high",
@@ -47,7 +86,7 @@ public partial class Data : Page
             "Once in a lullaby, oh"
         };
 
-        DataGridItemCollection = new ObservableCollection<Customer>()
+        _data.DataGridItemCollection = new List<Customer>()
         {
             new()
             {
@@ -99,7 +138,22 @@ public partial class Data : Page
             }
         };
 
-        DataContext = this;
+        var random = new Random();
+        var brushList = new List<Brush>();
+
+        for (int i = 0; i < 4096; i++)
+        {
+            brushList.Add(new SolidColorBrush
+            {
+                Color = Color.FromArgb(
+                    (byte)200,
+                    (byte)random.Next(0, 250),
+                    (byte)random.Next(0, 250),
+                    (byte)random.Next(0, 250))
+            });
+        }
+
+        _data.BrushCollection = brushList;
     }
 }
 

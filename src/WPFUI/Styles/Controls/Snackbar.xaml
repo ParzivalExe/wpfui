@@ -34,6 +34,8 @@
         <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
         <Setter Property="Margin" Value="24" />
         <Setter Property="MinHeight" Value="68" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="KeyboardNavigation.IsTabStop" Value="False" />
         <Setter Property="VerticalAlignment" Value="Bottom" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
@@ -124,6 +126,8 @@
                             <Setter TargetName="CloseButton" Property="Margin" Value="0" />
                         </Trigger>
                         <Trigger Property="IsShown" Value="True">
+                            <Setter Property="Focusable" Value="True" />
+                            <Setter Property="KeyboardNavigation.IsTabStop" Value="True" />
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
@@ -234,6 +238,28 @@
                 <Setter Property="Background">
                     <Setter.Value>
                         <SolidColorBrush Color="#F3F3F3" />
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+            <Trigger Property="Appearance" Value="Info">
+                <Setter Property="Foreground">
+                    <Setter.Value>
+                        <SolidColorBrush Color="#FFFFFF" />
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="MessageForeground">
+                    <Setter.Value>
+                        <SolidColorBrush Color="#87FFFFFF" />
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="IconForeground">
+                    <Setter.Value>
+                        <SolidColorBrush Color="#FFFFFF" />
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="Background">
+                    <Setter.Value>
+                        <SolidColorBrush Color="{DynamicResource PaletteLightBlueColor}" />
                     </Setter.Value>
                 </Setter>
             </Trigger>

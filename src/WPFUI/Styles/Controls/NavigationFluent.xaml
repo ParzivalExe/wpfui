@@ -34,6 +34,9 @@
             </Setter.Value>
         </Setter>
         <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentBrush}" />
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource UiFocusVisualStyle}" />
+        <Setter Property="KeyboardNavigation.IsTabStop" Value="True" />
+        <Setter Property="Focusable" Value="True" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="OverridesDefaultStyle" Value="True" />
         <Setter Property="Template">
@@ -70,6 +73,7 @@
                                     FontSize="{TemplateBinding IconSize}"
                                     Foreground="{TemplateBinding IconForeground}"
                                     Symbol="{TemplateBinding Icon}" />
+
                                 <Image
                                     x:Name="ItemImage"
                                     Grid.Column="0"
@@ -77,6 +81,7 @@
                                     Margin="0,0,14,0"
                                     RenderOptions.BitmapScalingMode="HighQuality"
                                     Source="{TemplateBinding Image}" />
+
                                 <ContentPresenter
                                     Grid.Column="1"
                                     HorizontalAlignment="Center"
@@ -249,6 +254,7 @@
     <Style TargetType="{x:Type controls:NavigationFluent}">
         <!--<Setter Property="ItemStyle" Value="{StaticResource UiFluentNavigationItemStyle}" />-->
         <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Focusable" Value="False" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="OverridesDefaultStyle" Value="True" />
         <Setter Property="Template">
@@ -267,7 +273,9 @@
                             <ItemsControl
                                 Grid.Row="0"
                                 Width="250"
+                                Focusable="False"
                                 ItemsSource="{TemplateBinding Items}"
+                                KeyboardNavigation.DirectionalNavigation="Contained"
                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                 ScrollViewer.VerticalScrollBarVisibility="Disabled">
                                 <ItemsControl.ItemsPanel>
@@ -279,7 +287,9 @@
 
                             <ItemsControl
                                 Grid.Row="1"
+                                Focusable="False"
                                 ItemsSource="{TemplateBinding Footer}"
+                                KeyboardNavigation.DirectionalNavigation="Contained"
                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                 ScrollViewer.VerticalScrollBarVisibility="Disabled">
                                 <ItemsControl.ItemsPanel>

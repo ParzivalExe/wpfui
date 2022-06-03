@@ -1,3 +1,5 @@
+![WPF UI Banner](https://user-images.githubusercontent.com/13592821/170846137-e0ae189d-b0bf-460e-bfc7-060f3c2538f8.png)
+
 # WPF UI
 [Created with ❤ in Poland by lepo.co](https://dev.lepo.co/)  
 A simple way to make your application written in WPF keep up with modern design trends. Library changes the base elements like `Page`, `ToggleButton` or `List`, and also includes additional controls like `Navigation`, `NumberBox`, `Dialog` or `Snackbar`.
@@ -7,7 +9,13 @@ A simple way to make your application written in WPF keep up with modern design 
 ## 🚀 Getting started
 For a starter guide see our [documentation](https://wpfui.lepo.co/documentation/).
 
-WPF UI is delivered via <b>NuGet</b> package manager. You can find the package here: https://www.nuget.org/packages/WPF-UI/
+WPF UI is delivered via **NuGet** package manager. You can find the package here:  
+https://www.nuget.org/packages/WPF-UI/
+
+**Visual Studio**  
+The plugin for Visual Studio 2022 will let you easily create new projects using **WPF UI**.  
+
+[<img src="https://user-images.githubusercontent.com/13592821/168439641-ffc5c215-e1e0-45b9-b7fd-e1842665faf5.png" width="120">](https://marketplace.visualstudio.com/items?itemName=lepo.WPF-UI)
 
 ## 📁 What's included?
 | Name| Framework |
@@ -31,8 +39,8 @@ WPF UI is delivered via <b>NuGet</b> package manager. You can find the package h
 ## 🏗️ Works with Visual Studio Designer
 ![VS2022 Designer Preview](https://user-images.githubusercontent.com/13592821/165919228-0aa3a36c-fb37-4198-835e-53488845226c.png)
 
-## 🏁 Virtualized Grid for displaying thousands controls
-![WPF UI Virtualized Grid](https://user-images.githubusercontent.com/13592821/166260193-f2eb1ee5-6db7-4844-be92-8fadd4e8bfb4.png)
+## 🏁 Virtualized panels for displaying thousands controls
+![WPF UI virtualized wrap panels](https://user-images.githubusercontent.com/13592821/167254364-bc7d1106-2740-4337-907c-0e0f1ce4c320.png)
 
 ## ❤️ Custom Tray icon and menu in pure WPF
 ![WPF UI Tray menu in WPF](https://user-images.githubusercontent.com/13592821/166259470-2d48a88e-47ce-4f8f-8f07-c9b110de64a5.png)
@@ -41,7 +49,7 @@ WPF UI is delivered via <b>NuGet</b> package manager. You can find the package h
 ![WPF UI Snap Layout for WPF](https://user-images.githubusercontent.com/13592821/166259869-e60d37e4-ded4-46bf-80d9-f92c47266f34.png)
 
 ## 🕹️ Radiograph
-Radiograph is a computer hardware monitoring app that uses `WPF UI`.
+Radiograph is a computer hardware monitoring app that uses **WPF UI**.
 
 ![Radiograph screenshot](https://user-images.githubusercontent.com/13592821/165918625-6cc72bb1-2617-40fa-a193-60fea0efcd65.png)
 
@@ -152,7 +160,7 @@ Design of the interface, choice of colors and the appearance of the controls wer
 The WPFUI.Demo app includes icons from Shell32 for Windows 11. These icons are the legal property of Microsoft and you may not use them in your own app without permission. They are used here as an example of creating tools for Microsoft systems.
 
 ## Segoe Fluent Icons
-WPF UI uses Fluent System Icons. Although this font was also created by Microsoft, it does not contain all the icons for Windows 11. If you need the missing icons, add Segoe Fluent Icons to your application.  
+**WPF UI** uses Fluent System Icons. Although this font was also created by Microsoft, it does not contain all the icons for Windows 11. If you need the missing icons, add Segoe Fluent Icons to your application.  
 According to the EULA of Segoe Fluent Icons we cannot ship a copy of it with this dll. Segoe Fluent Icons is installed by default on Windows 11, but if you want these icons in an application for Windows 10 and below, you must manually add the font to your application's resources.  
 [https://docs.microsoft.com/en-us/windows/apps/design/style/segoe-fluent-icons-font](https://docs.microsoft.com/en-us/windows/apps/design/style/segoe-fluent-icons-font)  
 [https://docs.microsoft.com/en-us/windows/apps/design/downloads/#fonts](https://docs.microsoft.com/en-us/windows/apps/design/downloads/#fonts)
@@ -173,5 +181,5 @@ Visual Studio
 This project has adopted the code of conduct defined by the Contributor Covenant to clarify expected behavior in our community.
 
 ## License
-WPF UI is free and open source software licensed under **MIT License**. You can use it in private and commercial projects.  
+**WPF UI** is free and open source software licensed under **MIT License**. You can use it in private and commercial projects.  
 Keep in mind that you must include a copy of the license in your project.

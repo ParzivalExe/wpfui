@@ -5,14 +5,13 @@
 
 using System;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace WPFUI.Demo.Views.Pages;
 
 /// <summary>
 /// Interaction logic for Dashboard.xaml
 /// </summary>
-public partial class Dashboard : Page
+public partial class Dashboard
 {
     public Dashboard()
     {
@@ -24,12 +23,48 @@ public partial class Dashboard : Page
         (Application.Current.MainWindow as Container)?.RootNavigation.Navigate("controls");
     }
 
+    private bool TryOpenWindow(string name)
+    {
+        switch (name)
+        {
+            case "window_store":
+                new Views.Windows.StoreWindow { Owner = Application.Current.MainWindow }
+                    .Show();
+
+                return true;
+
+            case "window_manager":
+                new Views.Windows.TaskManagerWindow { Owner = Application.Current.MainWindow }
+                    .Show();
+
+                return true;
+
+            case "window_editor":
+                new Views.Windows.EditorWindow { Owner = Application.Current.MainWindow }
+                    .Show();
+
+                return true;
+
+            case "window_settings":
+                new Views.Windows.SettingsWindow { Owner = Application.Current.MainWindow }
+                    .Show();
+
+                return true;
+        }
+
+        return false;
+    }
+
     private void ButtonAction_OnClick(object sender, RoutedEventArgs e)
     {
         if (sender is not WPFUI.Controls.CardAction cardAction)
             return;
 
         var tag = cardAction.Tag as string;
+
+        if (TryOpenWindow(tag))
+            return;
+
         var navTag = String.Empty;
 
         if (String.IsNullOrWhiteSpace(tag))
@@ -59,5 +94,9 @@ public partial class Dashboard : Page
 
         (Application.Current.MainWindow as Container)?.RootNavigation.Navigate(navTag);
     }
-}
 
+    private void ButtonExperimental_OnClick(object sender, RoutedEventArgs e)
+    {
+        new Windows.ExperimentalWindow { Owner = Application.Current.MainWindow }.Show();
+    }
+}

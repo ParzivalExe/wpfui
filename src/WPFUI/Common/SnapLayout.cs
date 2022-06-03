@@ -10,7 +10,8 @@ using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
-using WPFUI.Interop;
+using WPFUI.Appearance;
+using WPFUI.Controls.Interfaces;
 using Point = System.Windows.Point;
 using Size = System.Windows.Size;
 
@@ -19,9 +20,14 @@ namespace WPFUI.Common;
 /// <summary>
 /// Brings the Snap Layout functionality from Windows 11 to a custom <see cref="Controls.TitleBar"/>.
 /// </summary>
-internal sealed class SnapLayout
+internal sealed class SnapLayout : IThemeControl
 {
     public SolidColorBrush DefaultButtonBackground { get; set; } = Brushes.Transparent;
+
+    public SolidColorBrush HoverColorLight = Brushes.Transparent;
+
+    public SolidColorBrush HoverColorDark = Brushes.Transparent;
+    public ThemeType Theme { get; set; } = ThemeType.Unknown;
 
     private bool _isButtonFocused;
 
@@ -31,15 +37,11 @@ internal sealed class SnapLayout
 
     private Button _button;
 
-    private SolidColorBrush _hoverColor;
-
     public void Register(Button button)
     {
         _isButtonFocused = false;
         _button = button;
-        _dpiScale = Common.Dpi.SystemDpiYScale();
-
-        SetHoverColor();
+        _dpiScale = DpiHelper.SystemDpiYScale();
 
         HwndSource hwnd = (HwndSource)PresentationSource.FromVisual(button);
 
@@ -49,7 +51,7 @@ internal sealed class SnapLayout
 
     public static bool IsSupported()
     {
-        return Common.Windows.Is(WindowsRelease.Windows11);
+        return Win32.Utilities.IsOSWindows11OrNewer;
     }
 
     /// <summary>
@@ -65,11 +67,11 @@ internal sealed class SnapLayout
     {
         // TODO: This whole class is one big todo
 
-        User32.WM mouseNotification = (User32.WM)uMsg;
+        var mouseNotification = (Interop.User32.WM)uMsg;
 
         switch (mouseNotification)
         {
-            case User32.WM.NCLBUTTONDOWN:
+            case Interop.User32.WM.NCLBUTTONDOWN:
                 if (IsOverButton(wParam, lParam))
                 {
                     _isButtonClicked = true;
@@ -79,12 +81,12 @@ internal sealed class SnapLayout
 
                 break;
 
-            case User32.WM.NCMOUSELEAVE:
+            case Interop.User32.WM.NCMOUSELEAVE:
                 DefocusButton();
 
                 break;
 
-            case User32.WM.NCLBUTTONUP:
+            case Interop.User32.WM.NCLBUTTONUP:
                 if (!_isButtonClicked)
                     break;
 
@@ -96,7 +98,7 @@ internal sealed class SnapLayout
 
                 break;
 
-            case User32.WM.NCHITTEST:
+            case Interop.User32.WM.NCHITTEST:
                 if (IsOverButton(wParam, lParam))
                 {
                     FocusButton();
@@ -108,14 +110,14 @@ internal sealed class SnapLayout
                     DefocusButton();
                 }
 
-                return new IntPtr((int)HT.MAXBUTTON);
+                return new IntPtr((int)Interop.User32.WM_NCHITTEST.HTMAXBUTTON);
 
             default:
                 handled = false;
                 break;
         }
 
-        return new IntPtr((int)HT.CLIENT);
+        return new IntPtr((int)Interop.User32.WM_NCHITTEST.HTCLIENT);
     }
 
     private void FocusButton()
@@ -123,7 +125,7 @@ internal sealed class SnapLayout
         if (_isButtonFocused)
             return;
 
-        _button.Background = _hoverColor;
+        _button.Background = Theme == ThemeType.Dark ? HoverColorDark : HoverColorLight;
         _isButtonFocused = true;
     }
 
@@ -161,12 +163,5 @@ internal sealed class SnapLayout
     {
         if (new ButtonAutomationPeer(_button).GetPattern(PatternInterface.Invoke) is IInvokeProvider invokeProv)
             invokeProv?.Invoke();
-    }
-
-    private void SetHoverColor()
-    {
-        var color = Application.Current.Resources["ControlFillColorSecondary"] ?? Color.FromArgb(21, 255, 255, 255);
-
-        _hoverColor = new SolidColorBrush((Color)color);
     }
 }
