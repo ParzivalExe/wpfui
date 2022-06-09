@@ -9,7 +9,7 @@ namespace WPFUI.Taskbar;
 /// Specifies the state of the progress indicator in the Windows taskbar.
 /// <see href="https://docs.microsoft.com/en-us/dotnet/api/system.windows.shell.taskbaritemprogressstate?view=windowsdesktop-5.0"/>
 /// </summary>
-public enum ProgressState
+public enum TaskbarProgressState
 {
     /// <summary>
     /// No progress indicator is displayed in the taskbar button.

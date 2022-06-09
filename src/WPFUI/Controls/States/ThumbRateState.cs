@@ -3,16 +3,25 @@
 // Copyright (C) Leszek Pomianowski and WPF UI Contributors.
 // All Rights Reserved.
 
-namespace WPFUI.Controls.Interfaces;
+namespace WPFUI.Controls.States;
 
 /// <summary>
-/// Notifies page about being navigated.
+/// States of the <see cref="ThumbRate"/> control.
 /// </summary>
-public interface INavigable
+public enum ThumbRateState
 {
     /// <summary>
-    /// Method triggered when the page is navigated.
+    /// No thumb has been clicked.
     /// </summary>
-    /// <param name="sender">Navigation service, from which the navigation was made.</param>
-    void OnNavigationRequest(INavigation sender);
+    None,
+
+    /// <summary>
+    /// The thumb up has been clicked.
+    /// </summary>
+    Liked,
+
+    /// <summary>
+    /// The thumb down has been clicked.
+    /// </summary>
+    Disliked
 }

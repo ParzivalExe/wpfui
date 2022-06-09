@@ -70,6 +70,27 @@
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
+
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsEnabled" Value="True" />
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="IsFocused" Value="False" />
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Background">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="{DynamicResource ControlFillColorSecondary}" />
+                                </Setter.Value>
+                            </Setter>
+                        </MultiTrigger>
+
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter Property="Background">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="{DynamicResource ControlFillColorInputActive}" />
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -130,6 +151,7 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
                                 <Grid Grid.Column="0">
@@ -160,6 +182,26 @@
                                 </Grid>
 
                                 <Grid Grid.Column="2">
+                                    <controls:Button
+                                        x:Name="ClearButton"
+                                        Width="25"
+                                        Height="25"
+                                        Margin="2,0,0,0"
+                                        Padding="0,5"
+                                        Appearance="Secondary"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        Command="{Binding Path=TemplateButtonCommand, RelativeSource={RelativeSource TemplatedParent}}"
+                                        CommandParameter="clear"
+                                        Icon="Dismiss24"
+                                        Visibility="Collapsed">
+                                        <controls:Button.Foreground>
+                                            <SolidColorBrush Color="{DynamicResource TextFillColorTertiary}" />
+                                        </controls:Button.Foreground>
+                                    </controls:Button>
+                                </Grid>
+
+                                <Grid Grid.Column="3">
                                     <controls:SymbolIcon
                                         x:Name="IconRight"
                                         Margin="2,0,6,0"
@@ -172,6 +214,9 @@
                         </Border>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="ShowClearButton" Value="True">
+                            <Setter TargetName="ClearButton" Property="Visibility" Value="Visible" />
+                        </Trigger>
                         <Trigger Property="IsFocused" Value="True">
                             <Setter TargetName="BottomBorder" Property="BorderBrush">
                                 <Setter.Value>
@@ -181,6 +226,27 @@
                         </Trigger>
                         <Trigger Property="PlaceholderVisible" Value="False">
                             <Setter TargetName="Placeholder" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsEnabled" Value="True" />
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="IsFocused" Value="False" />
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Background">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="{DynamicResource ControlFillColorSecondary}" />
+                                </Setter.Value>
+                            </Setter>
+                        </MultiTrigger>
+
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter Property="Background">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="{DynamicResource ControlFillColorInputActive}" />
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
 
                         <MultiDataTrigger>

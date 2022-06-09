@@ -7,13 +7,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Navigation;
 using WPFUI.Common;
 using WPFUI.Controls.Interfaces;
+using WPFUI.Mvvm.Contracts;
+using WPFUI.Mvvm.Interfaces;
 
 namespace WPFUI.Controls.Navigation;
 
@@ -22,27 +22,10 @@ namespace WPFUI.Controls.Navigation;
 /// </summary>
 public abstract class NavigationBase : System.Windows.Controls.Control, INavigation
 {
-    private bool _firstPagePresented = false;
-
     /// <summary>
-    /// An identifier that is changed with each navigation.
+    /// Service used for navigation purposes.
     /// </summary>
-    internal long CurrentActionIdentifier { get; private set; }
-
-    /// <summary>
-    /// Identifier of the navigation service item currently in use.
-    /// </summary>
-    internal int CurrentlyNavigatedServiceItem { get; private set; }
-
-    /// <summary>
-    /// Identifies current Frame process.
-    /// </summary>
-    internal readonly EventIdentifier _eventIdentifier;
-
-    /// <summary>
-    /// <see cref="Items"/> and <see cref="Footer"/> mirror with cached page contents.
-    /// </summary>
-    internal IDictionary<int, NavigationServiceItem> _navigationServiceItems;
+    private readonly WPFUI.Services.NavigationService _navigationService;
 
     /// <summary>
     /// Property for <see cref="Items"/>.
@@ -71,7 +54,7 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
     public static readonly DependencyProperty TransitionDurationProperty = DependencyProperty.Register(
         nameof(TransitionDuration),
         typeof(int), typeof(NavigationBase),
-        new PropertyMetadata(300));
+        new PropertyMetadata(300, OnTransitionDurationChanged));
 
     /// <summary>
     /// Property for <see cref="TransitionType"/>.
@@ -79,7 +62,7 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
     public static readonly DependencyProperty TransitionTypeProperty = DependencyProperty.Register(
         nameof(TransitionType),
         typeof(Services.TransitionType), typeof(NavigationBase),
-        new PropertyMetadata(Services.TransitionType.FadeInWithSlide));
+        new PropertyMetadata(Services.TransitionType.FadeInWithSlide, OnTransitionTypeChanged));
 
     /// <summary>
     /// Property for <see cref="SelectedPageIndex"/>.
@@ -204,17 +187,27 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
 
     #endregion
 
+    /// <inheritdoc/>
+    public IPageService PageService
+    {
+        get => _navigationService.GetService();
+        set => _navigationService.SetService(value);
+    }
+
+    /// <inheritdoc/>
+    public int PreviousPageIndex => _navigationService?.GetPreviousId() ?? 0;
+
+    /// <inheritdoc/>
+    public INavigationItem Current { get; internal set; }
+
     /// <summary>
     /// Navigation history containing pages tags.
     /// </summary>
     public List<string> History { get; internal set; }
 
-    /// <inheritdoc/>
-    public INavigationItem Current { get; internal set; }
-
-    /// <inheritdoc/>
-    public int PreviousPageIndex { get; internal set; }
-
+    /// <summary>
+    /// Static constructor overriding default properties.
+    /// </summary>
     static NavigationBase()
     {
         KeyboardNavigation.DirectionalNavigationProperty.OverrideMetadata(
@@ -231,8 +224,11 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
     /// </summary>
     protected NavigationBase()
     {
-        _eventIdentifier = new EventIdentifier();
-        _navigationServiceItems = new Dictionary<int, NavigationServiceItem>();
+        _navigationService = new WPFUI.Services.NavigationService();
+        _navigationService.TransitionDuration = TransitionDuration;
+        _navigationService.TransitionType = TransitionType;
+
+        _navigationService.SetFrame(Frame);
 
         InitializeBase();
     }
@@ -245,14 +241,41 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
         // Let the NavigationItem children be able to get me.
         NavigationParent = this;
 
-        PreviousPageIndex = 0;
         Current = (INavigationItem)null;
         History = new List<string>();
 
+        // Prepare individual collections for this navigation
         Items ??= new ObservableCollection<INavigationControl>();
         Footer ??= new ObservableCollection<INavigationControl>();
 
+        // Loaded does not have override
         Loaded += OnLoaded;
+    }
+
+    /// <inheritdoc/>
+    public bool Navigate(Type pageType)
+    {
+        return Navigate(pageType, null);
+    }
+
+    /// <inheritdoc/>
+    public bool Navigate(Type pageType, object dataContext)
+    {
+        if (!_navigationService.Navigate(pageType, dataContext))
+            return false;
+
+        SelectedPageIndex = _navigationService.GetCurrentId();
+
+        UpdateItems();
+
+        OnNavigated();
+
+        if (_navigationService.GetCurrentId() > _navigationService.GetPreviousId())
+            OnNavigatedForward();
+        else
+            OnNavigatedBackward();
+
+        return true;
     }
 
     /// <inheritdoc/>
@@ -264,22 +287,21 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
     /// <inheritdoc/>
     public bool Navigate(string pageTag, object dataContext)
     {
-        var selectedItem = -1;
-
-        foreach (KeyValuePair<int, NavigationServiceItem> item in _navigationServiceItems)
-        {
-            if (item.Value.Tag != pageTag)
-                continue;
-
-            selectedItem = item.Key;
-
-            break;
-        }
-
-        if (selectedItem < 0)
+        if (!_navigationService.Navigate(pageTag, dataContext))
             return false;
 
-        return Navigate(selectedItem, dataContext);
+        SelectedPageIndex = _navigationService.GetCurrentId();
+
+        UpdateItems();
+
+        OnNavigated();
+
+        if (_navigationService.GetCurrentId() > _navigationService.GetPreviousId())
+            OnNavigatedForward();
+        else
+            OnNavigatedBackward();
+
+        return true;
     }
 
 
@@ -292,43 +314,21 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
     /// <inheritdoc/>
     public bool Navigate(int pageId, object dataContext)
     {
-        if (pageId < 0)
+        if (!_navigationService.Navigate(pageId, dataContext))
             return false;
 
-        if (pageId > _navigationServiceItems.Count)
-            return false;
+        SelectedPageIndex = _navigationService.GetCurrentId();
 
-        if (!_navigationServiceItems.TryGetValue(pageId, out var currentNavigationServiceItem))
-            return false;
-
-        // This item is invalid OR used as button
-        if (currentNavigationServiceItem.Source == null && currentNavigationServiceItem.Type == null)
-            return false;
-
-        if (SelectedPageIndex == pageId && _firstPagePresented)
-            return false;
-
-        _firstPagePresented = true;
-
-        CurrentlyNavigatedServiceItem = pageId;
-
-        PreviousPageIndex = SelectedPageIndex;
-        SelectedPageIndex = pageId;
-
-        NavigateBySourceOrInstance(pageId, ref currentNavigationServiceItem, dataContext);
-
-        History.Add(currentNavigationServiceItem.Tag);
-
-        SetCurrentPage(currentNavigationServiceItem.Tag);
+        UpdateItems();
 
         OnNavigated();
 
-        if (PreviousPageIndex > SelectedPageIndex)
+        if (_navigationService.GetCurrentId() > _navigationService.GetPreviousId())
             OnNavigatedForward();
         else
             OnNavigatedBackward();
 
-        return false;
+        return true;
     }
 
     /// <inheritdoc/>
@@ -340,27 +340,19 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
     /// <inheritdoc/>
     public bool NavigateExternal(object frameworkElement, object dataContext)
     {
-        if (frameworkElement is not FrameworkElement)
-            throw new InvalidOperationException(
-                $"Only an object inherited from the {typeof(FrameworkElement)} class can be loaded into the navigation Frame.");
-
-        if (Frame == null)
+        if (!_navigationService.NavigateExternal(frameworkElement, dataContext))
             return false;
 
-        CurrentlyNavigatedServiceItem = -1;
-        PreviousPageIndex = SelectedPageIndex;
-        SelectedPageIndex = -1;
+        SelectedPageIndex = _navigationService.GetCurrentId();
 
-        SetCurrentPage("_");
+        UpdateItems();
 
-        Current = (INavigationItem)null;
+        OnNavigated();
 
-        Frame.Navigate(frameworkElement, new NavigationServiceExtraData
-        {
-            PageId = -1,
-            Cache = false,
-            DataContext = dataContext
-        });
+        if (_navigationService.GetCurrentId() > _navigationService.GetPreviousId())
+            OnNavigatedForward();
+        else
+            OnNavigatedBackward();
 
         return true;
     }
@@ -374,26 +366,17 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
     /// <inheritdoc/>
     public bool NavigateExternal(Uri absolutePageUri, object dataContext)
     {
-        if (!absolutePageUri.IsAbsoluteUri)
-            throw new InvalidOperationException($"The Uri to the element must be absolute.");
-
-        if (Frame == null)
+        if (!_navigationService.NavigateExternal(absolutePageUri, dataContext))
             return false;
 
-        CurrentlyNavigatedServiceItem = -1;
-        PreviousPageIndex = SelectedPageIndex;
-        SelectedPageIndex = -1;
+        SelectedPageIndex = _navigationService.GetCurrentId();
 
-        SetCurrentPage("_");
+        OnNavigated();
 
-        Current = (INavigationItem)null;
-
-        Frame.Navigate(absolutePageUri, new NavigationServiceExtraData
-        {
-            PageId = -1,
-            Cache = false,
-            DataContext = dataContext
-        });
+        if (_navigationService.GetCurrentId() > _navigationService.GetPreviousId())
+            OnNavigatedForward();
+        else
+            OnNavigatedBackward();
 
         return true;
     }
@@ -405,53 +388,21 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
             return;
 
         ((FrameworkElement)Frame.Content).DataContext = dataContext;
+
+        if (dataContext is IViewModel)
+            ((IViewModel)dataContext).OnMounted(((FrameworkElement)Frame.Content));
     }
 
     /// <inheritdoc/>
     public bool SetContext(string pageTag, object dataContext)
     {
-        var selectedItem = -1;
-
-        foreach (KeyValuePair<int, NavigationServiceItem> item in _navigationServiceItems)
-        {
-            if (item.Value.Tag != pageTag)
-                continue;
-
-            selectedItem = item.Key;
-
-            break;
-        }
-
-        if (selectedItem < 0)
-            return false;
-
-        return SetContext(selectedItem, dataContext);
+        return _navigationService.SetContext(pageTag, dataContext);
     }
 
     /// <inheritdoc/>
     public bool SetContext(int pageId, object dataContext)
     {
-        if (!_navigationServiceItems[pageId].Cache)
-            throw new InvalidOperationException(
-                "Unable to set the DataContext if the page does not have an active Cache.");
-
-        if (_navigationServiceItems[pageId].Instance != null &&
-            _navigationServiceItems[pageId].Instance is FrameworkElement)
-        {
-            _navigationServiceItems[pageId].SetContext(dataContext);
-
-            return true;
-        }
-
-        if (_navigationServiceItems[pageId].Instance == null && _navigationServiceItems[pageId].Type != null)
-        {
-            _navigationServiceItems[pageId].Instance =
-                CreateFrameworkElementInstance(_navigationServiceItems[pageId].Type, dataContext);
-
-            return true;
-        }
-
-        return false;
+        return _navigationService.SetContext(pageId, dataContext);
     }
 
     /// <inheritdoc/>
@@ -466,189 +417,46 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
     /// <inheritdoc/>
     public void ClearCache()
     {
-        foreach (var singleServiceItem in _navigationServiceItems)
-            singleServiceItem.Value.Instance = null;
+        _navigationService.ClearCache();
     }
 
     /// <summary>
-    /// Tries to navigate to the selected page and create a cache entry.
+    /// Updates <see cref="Current"/> property and modifies Active attribute of navigation items.
     /// </summary>
-    private void NavigateBySourceOrInstance(int pageId, ref NavigationServiceItem navigationServiceItem,
-        object dataContext)
+    private void UpdateItems()
     {
-        CurrentActionIdentifier = _eventIdentifier.GetNext();
+        var currentTag = _navigationService.GetCurrentTag();
 
-        // WITHOUT CACHE
-        if (!navigationServiceItem.Cache)
+        foreach (var singleNavigationControl in Items)
         {
-            // WITHOUT CACHE - BY TYPE
-            if (navigationServiceItem.Type != null)
-            {
-                Frame.Navigate(
-                    CreateFrameworkElementInstance
-                    (
-                        navigationServiceItem.Type,
-                        dataContext
-                    ),
-                    new NavigationServiceExtraData
-                    {
-                        PageId = pageId,
-                        Cache = navigationServiceItem.Cache,
-                        DataContext = null
-                    });
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine(
-                    $"DEBUG | {navigationServiceItem.Tag} loaded by TYPE, WITHOUT CACHE. CACHE: {navigationServiceItem.Cache}");
-#endif
-                return;
-            }
-
-            // WITHOUT CACHE - BY SOURCE
-            if (navigationServiceItem.Source != null)
-            {
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine(
-                    $"DEBUG | {navigationServiceItem.Tag} loaded by SOURCE, WITHOUT CACHE. CACHE: {navigationServiceItem.Cache}");
-#endif
-                Frame.Navigate(
-                    navigationServiceItem.Source,
-                    new NavigationServiceExtraData
-                    {
-                        PageId = pageId,
-                        Cache = navigationServiceItem.Cache,
-                        DataContext = dataContext
-                    });
-
-                return;
-            }
-
-            throw new InvalidOperationException(
-                $"{typeof(INavigationItem)} when navigated, should have TYPE or SOURCE");
-        }
-
-        // WITH CACHE - BY CACHE
-        if (navigationServiceItem.Instance != null)
-        {
-#if DEBUG
-            System.Diagnostics.Debug.WriteLine(
-                $"DEBUG | {navigationServiceItem.Tag} loaded by INSTANCE, WITH CACHE. CACHE: {navigationServiceItem.Cache}");
-#endif
-            // Sometimes a user may want to update the context of a page that is already in the cache.
-            if (dataContext != null && navigationServiceItem.Instance is FrameworkElement)
-                ((FrameworkElement)navigationServiceItem.Instance).DataContext = dataContext;
-
-            Frame.Navigate(
-                navigationServiceItem.Instance,
-                new NavigationServiceExtraData
-                {
-                    PageId = pageId,
-                    Cache = navigationServiceItem.Cache,
-                    DataContext = null
-                });
-
-            return;
-        }
-
-        // WITH CACHE - BY TYPE
-        if (navigationServiceItem.Type != null)
-        {
-#if DEBUG
-            System.Diagnostics.Debug.WriteLine(
-                $"DEBUG | {navigationServiceItem.Tag} loaded by TYPE, WITHOUT CACHE. CACHE: {navigationServiceItem.Cache}");
-#endif
-            navigationServiceItem.Instance = CreateFrameworkElementInstance(navigationServiceItem.Type, dataContext);
-
-            Frame.Navigate(
-                navigationServiceItem.Instance,
-                new NavigationServiceExtraData
-                {
-                    PageId = pageId,
-                    Cache = navigationServiceItem.Cache,
-                    DataContext = null
-                });
-
-#if DEBUG
-            System.Diagnostics.Debug.WriteLine($"DEBUG | Cache for {navigationServiceItem.Tag} saved.");
-#endif
-
-            return;
-        }
-
-        if (navigationServiceItem.Source == null)
-            throw new InvalidOperationException(
-                $"{typeof(INavigationItem)} when navigated, should have TYPE or SOURCE");
-
-        // WITH CACHE - BY SOURCE
-#if DEBUG
-        System.Diagnostics.Debug.WriteLine(
-            $"DEBUG | {navigationServiceItem.Tag} loaded by SOURCE, WITHOUT CACHE. CACHE: {navigationServiceItem.Cache}");
-#endif
-
-        Frame.Navigate(
-            navigationServiceItem.Source,
-            new NavigationServiceExtraData
-            {
-                PageId = pageId,
-                Cache = navigationServiceItem.Cache,
-                DataContext = dataContext
-            });
-    }
-
-    /// <summary>
-    /// Tries to create an instance from the selected page type.
-    /// </summary>
-    private FrameworkElement CreateFrameworkElementInstance(Type pageType, object dataContext)
-    {
-        if (!typeof(FrameworkElement).IsAssignableFrom(pageType))
-            throw new InvalidCastException(
-                $"PageType of the ${typeof(INavigationItem)} must be derived from {typeof(FrameworkElement)}");
-
-        if (DesignerHelper.IsInDesignMode)
-            Frame.Navigate(new Page { Content = new TextBlock { Text = "Preview" } });
-
-        var instance = Activator.CreateInstance(pageType);
-
-        if (dataContext != null && instance is FrameworkElement)
-            ((FrameworkElement)instance).DataContext = dataContext;
-
-        return instance as FrameworkElement;
-    }
-
-    /// <summary>
-    /// Changes the state of all but selected item to inactive and defines the <see cref="Current"/> parameter.
-    /// </summary>
-    private void SetCurrentPage(string currentPageTag)
-    {
-        foreach (var singleNavItem in Items)
-        {
-            if (singleNavItem is not INavigationItem navigationItem)
+            if (singleNavigationControl is not INavigationItem)
                 continue;
 
-            if (!navigationItem.PageTag.Equals(currentPageTag))
+            if (((INavigationItem)singleNavigationControl).PageTag == currentTag)
             {
-                navigationItem.IsActive = false;
-
-                continue;
+                ((INavigationItem)singleNavigationControl).IsActive = true;
+                Current = (INavigationItem)singleNavigationControl;
             }
-
-            navigationItem.IsActive = true;
-            Current = navigationItem;
+            else
+            {
+                ((INavigationItem)singleNavigationControl).IsActive = false;
+            }
         }
 
-        foreach (var singleNavItem in Footer)
+        foreach (var singleNavigationControl in Footer)
         {
-            if (singleNavItem is not INavigationItem navigationItem)
+            if (singleNavigationControl is not INavigationItem)
                 continue;
 
-            if (!navigationItem.PageTag.Equals(currentPageTag))
+            if (((INavigationItem)singleNavigationControl).PageTag == currentTag)
             {
-                navigationItem.IsActive = false;
-
-                continue;
+                ((INavigationItem)singleNavigationControl).IsActive = true;
+                Current = (INavigationItem)singleNavigationControl;
             }
-
-            navigationItem.IsActive = true;
-            Current = navigationItem;
+            else
+            {
+                ((INavigationItem)singleNavigationControl).IsActive = false;
+            }
         }
     }
 
@@ -657,13 +465,20 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
     /// </summary>
     protected virtual async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        RebuildServiceItems();
+        _navigationService.UpdateItems(Items, Footer);
 
-        if (Frame != null && SelectedPageIndex > -1)
+        if (PageService == null && Frame != null && SelectedPageIndex > -1)
             Navigate(SelectedPageIndex);
 
+        // If we are using the MVVM model, do not use the cache.
         if (Precache)
-            await PrecacheInstances();
+        {
+            if (PageService != null)
+                throw new InvalidOperationException("The cache cannot be used if you are using IPageService.");
+
+            // TODO: Precache
+            //await PrecacheInstances();
+        }
     }
 
     /// <inheritdoc/>
@@ -749,7 +564,17 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
         if (navigationItem.AbsolutePageSource == null && navigationItem.PageType == null)
             return;
 
-        Navigate(navigationItem.PageTag);
+        if (PageService == null)
+        {
+            Navigate(navigationItem.PageTag);
+
+            return;
+        }
+
+        if (navigationItem.PageType == null)
+            throw new InvalidOperationException("When navigating through the IPageService, the navigated page type must be defined the INavigationItem.PageType.");
+
+        Navigate(navigationItem.PageType);
     }
 
     /// <summary>
@@ -758,12 +583,15 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
     protected virtual void OnNavigationCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
         if (IsLoaded)
-            RebuildServiceItems();
+            _navigationService.UpdateItems(Items, Footer);
 
         if (e.NewItems != null)
             foreach (var addedItem in e.NewItems)
                 if (addedItem is INavigationItem)
+                {
+                    ((INavigationItem)addedItem).Click -= OnNavigationItemClicked; // Unsafe - Remove duplicates
                     ((INavigationItem)addedItem).Click += OnNavigationItemClicked;
+                }
 
         if (e.OldItems == null)
             return;
@@ -805,10 +633,7 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
     /// </summary>
     protected virtual void OnFrameChanged(Frame frame)
     {
-        frame.NavigationUIVisibility = NavigationUIVisibility.Hidden;
-
-        frame.Navigating += OnFrameNavigating;
-        frame.Navigated += OnFrameNavigated;
+        _navigationService.SetFrame(frame);
     }
 
     /// <summary>
@@ -822,92 +647,20 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
         navigationBase.OnFrameChanged(frame);
     }
 
-    /// <summary>
-    /// Event triggered when the frame has already loaded the view, if the page uses the Cache, Content of the Frame should be saved.
-    /// </summary>
-    protected virtual void OnFrameNavigated(object sender, NavigationEventArgs e)
+    private static void OnTransitionDurationChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        // Use NavigationEventArgs extradata
-        if (sender is not Frame frame)
+        if (d is not NavigationBase navigation)
             return;
 
-        var transitionTime = TransitionDuration;
-
-        if (transitionTime > 0)
-            Services.TransitionService.ApplyTransition(e.Content, TransitionType, transitionTime);
-
-        if (frame.CanGoBack)
-            frame.RemoveBackEntry();
-
-        if (frame.NavigationService.CanGoBack)
-            frame.NavigationService?.RemoveBackEntry();
-
-        if (frame.Content == null)
-            return;
-
-        if (frame.Content is INavigable)
-            ((INavigable)frame.Content).OnNavigationRequest(this);
-
-        if (!_eventIdentifier.IsEqual(CurrentActionIdentifier))
-            return;
-
-        if (e.ExtraData is not NavigationServiceExtraData extraData)
-            return;
-
-        if (extraData.DataContext != null && frame.Content is FrameworkElement)
-        {
-#if DEBUG
-            if (_navigationServiceItems.ContainsKey(extraData.PageId))
-                System.Diagnostics.Debug.WriteLine(
-                $"DEBUG | DataContext for {_navigationServiceItems[extraData.PageId].Tag} set.");
-#endif
-            ((FrameworkElement)frame.Content).DataContext = extraData.DataContext;
-        }
-
-        // If you are not using the cache, just exit the method.
-        if (!extraData.Cache)
-            return;
-
-        // We make sure that pageId exists, if it is wrong, the fault lies earlier.
-        if (!_navigationServiceItems.ContainsKey(extraData.PageId))
-            return;
-
-        // If an instance already exists, do not overwrite it.
-        if (_navigationServiceItems[extraData.PageId].Instance != null)
-            return;
-
-        _navigationServiceItems[extraData.PageId].Instance = frame.Content;
-
-#if DEBUG
-        System.Diagnostics.Debug.WriteLine(
-            $"DEBUG | Cache for {_navigationServiceItems[extraData.PageId].Tag} saved.");
-#endif
+        navigation._navigationService.TransitionDuration = (int)e.NewValue;
     }
 
-    /// <summary>
-    /// Event fired when Frame received a request to navigate.
-    /// </summary>
-    protected virtual void OnFrameNavigating(object sender, NavigatingCancelEventArgs e)
+    private static void OnTransitionTypeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (sender is not Frame frame)
+        if (d is not NavigationBase navigation)
             return;
 
-        switch (e.NavigationMode)
-        {
-            case NavigationMode.Back:
-                e.Cancel = true;
-
-                if (CurrentlyNavigatedServiceItem > 0)
-                    Navigate(CurrentlyNavigatedServiceItem - 1);
-                break;
-
-            case NavigationMode.Forward:
-                e.Cancel = true;
-
-                if (CurrentlyNavigatedServiceItem < _navigationServiceItems.Count)
-                    Navigate(CurrentlyNavigatedServiceItem + 1);
-                break;
-        }
+        navigation._navigationService.TransitionType = (Services.TransitionType)e.NewValue;
     }
 
     /// <summary>
@@ -919,53 +672,5 @@ public abstract class NavigationBase : System.Windows.Controls.Control, INavigat
         where T : DependencyObject, INavigationItem
     {
         return (NavigationBase?)navigationItem.GetValue(NavigationParentProperty);
-    }
-
-    /// <summary>
-    /// Creates a mirror list of navigation items for internal use in the navigation service.
-    /// </summary>
-    private void RebuildServiceItems()
-    {
-        _navigationServiceItems.Clear();
-
-        var indexShift = 0;
-
-        foreach (var singleItem in Items)
-        {
-            if (singleItem is not INavigationItem navigationItem)
-                continue;
-
-            _navigationServiceItems.Add(indexShift++, NavigationServiceItem.Create(navigationItem));
-        }
-
-        foreach (var singleItem in Footer)
-        {
-            if (singleItem is not INavigationItem navigationItem)
-                continue;
-
-            _navigationServiceItems.Add(indexShift++, NavigationServiceItem.Create(navigationItem));
-        }
-    }
-
-    /// <summary>
-    /// Precaches instances of the navigation items.
-    /// </summary>
-    private async Task PrecacheInstances()
-    {
-        if (DesignerHelper.IsInDesignMode)
-            return;
-
-        await Task.Run(async () =>
-        {
-            foreach (var singleServiceItem in _navigationServiceItems)
-            {
-                if (singleServiceItem.Value.Cache && singleServiceItem.Value.Type != null && singleServiceItem.Value.Instance == null)
-                    await Dispatcher.InvokeAsync(() =>
-                    {
-                        singleServiceItem.Value.Instance =
-                            CreateFrameworkElementInstance(singleServiceItem.Value.Type, null);
-                    });
-            }
-        });
     }
 }

@@ -4,15 +4,15 @@
 // All Rights Reserved.
 
 using System.Windows;
-using WPFUI.Controls.Interfaces;
-using WPFUI.Demo.Views.Windows;
+using WPFUI.Common.Interfaces;
+using WPFUI.Demo.ViewModels;
 
 namespace WPFUI.Demo.Views.Pages;
 
 /// <summary>
 /// Interaction logic for ExperimentalDashboard.xaml
 /// </summary>
-public partial class ExperimentalDashboard : WPFUI.Controls.UiPage, INavigable
+public partial class ExperimentalDashboard : WPFUI.Controls.UiPage, INavigationAware
 {
     public ExperimentalDashboard()
     {
@@ -21,9 +21,14 @@ public partial class ExperimentalDashboard : WPFUI.Controls.UiPage, INavigable
         Loaded += OnLoaded;
     }
 
-    public void OnNavigationRequest(INavigation sender)
+    public void OnNavigatedTo()
     {
-        System.Diagnostics.Debug.WriteLine($"DEBUG | {typeof(ExperimentalDashboard)} navigated by {sender.GetType()}", "Experimental");
+        System.Diagnostics.Debug.WriteLine($"DEBUG | {typeof(ExperimentalDashboard)} navigated", "Experimental");
+    }
+
+    public void OnNavigatedFrom()
+    {
+        System.Diagnostics.Debug.WriteLine($"DEBUG | {typeof(ExperimentalDashboard)} navigated out", "Experimental");
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -40,17 +45,26 @@ public partial class ExperimentalDashboard : WPFUI.Controls.UiPage, INavigable
 
     private void UpdateIdButton_OnClick(object sender, RoutedEventArgs e)
     {
-        if (DataContext is not ExperimentalViewData)
+        if (DataContext is not ExperimentalViewModel)
             return;
 
-        ((ExperimentalViewData)DataContext).GeneralId++;
+        ((ExperimentalViewModel)DataContext).GeneralId++;
     }
 
     private void ButtonExternal_OnClick(object sender, RoutedEventArgs e)
     {
-        if (DataContext is not ExperimentalViewData viewData)
+        if (DataContext is not ExperimentalViewModel viewData)
             return;
 
-        viewData.Navigation.NavigateExternal(new ExperimentalDashboard(), viewData);
+        viewData.ParentWindow.Navigate(typeof(ExperimentalDashboard));
+    }
+
+    private void ButtonTaskbar_OnClick(object sender, RoutedEventArgs e)
+    {
+        //switch (TaskbarStateComboBox.SelectedIndex)
+        //{
+        //    case 0:
+        //        TaskbarProgress.SetState()
+        //}
     }
 }
