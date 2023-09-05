@@ -13,13 +13,16 @@
     xmlns:converters="clr-namespace:WPFUI.Converters"
     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
-    <Duration x:Key="ScrollAnimationDuration">0:0:0.16</Duration>
-    <Duration x:Key="ButtonHoverAnimationDuration">0:0:0.16</Duration>
+    <Duration x:Key="ScrollAnimationDuration">0:0:.1</Duration>
+    <Duration x:Key="ButtonHoverAnimationDuration">0:0:.16</Duration>
+    <sys:TimeSpan x:Key="ScrollFocusAnimationDelay">0:0:0.2</sys:TimeSpan>
+    <sys:TimeSpan x:Key="ScrollUnfocusAnimationDelay">0:0:0.6</sys:TimeSpan>
 
-    <sys:Double x:Key="LineButtonHeight">12</sys:Double>
-    <sys:Double x:Key="LineButtonWidth">12</sys:Double>
+    <sys:Double x:Key="LineButtonHeight">10</sys:Double>
+    <sys:Double x:Key="LineButtonWidth">10</sys:Double>
 
     <converters:ObjectToSymbolConverter x:Key="ObjectToSymbolConverter" />
+    <converters:SizeToCornerRadiusConverter x:Key="SizeToCornerRadiusConverter"/>
 
     <Style x:Key="UiScrollBarLineButton" TargetType="{x:Type RepeatButton}">
         <Setter Property="Foreground">
@@ -41,13 +44,17 @@
                         Width="{TemplateBinding Width}"
                         Height="{TemplateBinding Height}"
                         Margin="{TemplateBinding Margin}"
-                        CornerRadius="6">
+                        CornerRadius="5">
                         <Border.Background>
                             <SolidColorBrush Opacity="0" Color="{DynamicResource ControlFillColorDefault}" />
                         </Border.Background>
                         <controls:SymbolIcon
-                            FontSize="8"
+                            FontSize="14"
+                            Margin="-2,-1,0,0"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
                             Foreground="{TemplateBinding Foreground}"
+                            Filled="True"
                             Symbol="{Binding Path=Content, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay, Converter={StaticResource ObjectToSymbolConverter}}" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -98,24 +105,34 @@
     </Style>
 
     <Style x:Key="UiScrollBarThumb" TargetType="{x:Type Thumb}">
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="Background">
             <Setter.Value>
-                <SolidColorBrush Color="{DynamicResource ControlStrongFillColorDefault}" />
+                <SolidColorBrush Color="{DynamicResource ControlStrongFillColorDefault}"/>
             </Setter.Value>
         </Setter>
-        <Setter Property="Border.CornerRadius" Value="4" />
-        <Setter Property="SnapsToDevicePixels" Value="True" />
-        <Setter Property="OverridesDefaultStyle" Value="True" />
-        <Setter Property="IsTabStop" Value="False" />
-        <Setter Property="Focusable" Value="False" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Thumb}">
-                    <Border
-                        Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="{TemplateBinding Border.CornerRadius}" />
+                    <Border Background="Transparent">
+                        <Border
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            Margin="{TemplateBinding Padding}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                            <Border.CornerRadius>
+                                <MultiBinding Converter="{StaticResource SizeToCornerRadiusConverter}" ConverterParameter="2.0">
+                                    <Binding RelativeSource="{RelativeSource TemplatedParent}" Path="ActualWidth"/>
+                                    <Binding RelativeSource="{RelativeSource TemplatedParent}" Path="ActualHeight"/>
+                                    <Binding RelativeSource="{RelativeSource TemplatedParent}" Path="Padding"/>
+                                </MultiBinding>
+                            </Border.CornerRadius>
+                        </Border>
+                    </Border>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -124,14 +141,15 @@
     <ControlTemplate x:Key="UiVerticalScrollBar" TargetType="{x:Type ScrollBar}">
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition MaxHeight="14" />
+                <RowDefinition MaxHeight="12" />
                 <RowDefinition Height="0.00001*" />
-                <RowDefinition MaxHeight="14" />
+                <RowDefinition MaxHeight="12" />
             </Grid.RowDefinitions>
+
             <Border
                 x:Name="PART_Border"
                 Grid.RowSpan="3"
-                Width="12"
+                Width="10"
                 HorizontalAlignment="Center"
                 CornerRadius="6">
                 <Border.Background>
@@ -139,39 +157,49 @@
                 </Border.Background>
             </Border>
 
+            <!--<RepeatButton
+                x:Name="PART_ButtonScrollUp"
+                Grid.Row="0"
+                Command="ScrollBar.LineUpCommand"
+                Content="{x:Static common:SymbolFilled.CaretUp20}"
+                Opacity="0"
+                Style="{StaticResource UiScrollBarLineButton}" />-->
+
             <RepeatButton
                 x:Name="PART_ButtonScrollUp"
                 Grid.Row="0"
                 Command="ScrollBar.LineUpCommand"
-                Content="{x:Static common:SymbolRegular.ChevronUp24}"
-                Opacity="0"
-                Style="{StaticResource UiScrollBarLineButton}" />
+                Opacity="0">
+                <Path
+                    Data="M6.41,3.08l3.6,5.3C10.22,8.7,9.99,9.14,9.6,9.14l-7.19,0C2.01,9.14,1.78,8.7,2,8.37l3.6-5.3C5.79,2.79,6.21,2.79,6.41,3.08z"
+                    VerticalAlignment="Stretch"
+                    HorizontalAlignment="Stretch">
+                </Path>
+            </RepeatButton>
+            
             <Track
                 x:Name="PART_Track"
                 Grid.Row="1"
-                Width="6"
                 IsDirectionReversed="True">
                 <Track.DecreaseRepeatButton>
                     <RepeatButton Command="ScrollBar.PageUpCommand" Style="{StaticResource UiScrollBarPageButton}" />
                 </Track.DecreaseRepeatButton>
                 <Track.Thumb>
-                    <!--
-                        TODO: Need to add a custom Thumb with a corner radius that will increase when OnMouseOver is triggered.
-                    -->
                     <Thumb
-                        Margin="0"
-                        Padding="0"
-                        Style="{StaticResource UiScrollBarThumb}" />
+                        x:Name="PART_Thumb"
+                        Style="{StaticResource UiScrollBarThumb}"
+                        Padding="6,0,2,0"/>
                 </Track.Thumb>
                 <Track.IncreaseRepeatButton>
                     <RepeatButton Command="ScrollBar.PageDownCommand" Style="{StaticResource UiScrollBarPageButton}" />
                 </Track.IncreaseRepeatButton>
             </Track>
+            
             <RepeatButton
                 x:Name="PART_ButtonScrollDown"
                 Grid.Row="2"
                 Command="ScrollBar.LineDownCommand"
-                Content="{x:Static common:SymbolRegular.ChevronDown24}"
+                Content="{x:Static common:SymbolFilled.CaretDown20}"
                 Opacity="0"
                 Style="{StaticResource UiScrollBarLineButton}" />
         </Grid>
@@ -180,60 +208,60 @@
                 <Trigger.EnterActions>
                     <BeginStoryboard>
                         <Storyboard>
-                            <DoubleAnimation
-                                Storyboard.TargetName="PART_Track"
-                                Storyboard.TargetProperty="Width"
-                                From="6"
-                                To="10"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                            <ThicknessAnimation
+                                Storyboard.TargetName="PART_Thumb"
+                                Storyboard.TargetProperty="Padding"
+                                To="2,0,2,0"
+                                Duration="{StaticResource ScrollAnimationDuration}"
+                                BeginTime="{StaticResource ScrollFocusAnimationDelay}"/>
                             <DoubleAnimation
                                 Storyboard.TargetName="PART_Border"
                                 Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Opacity)"
-                                From="0.0"
                                 To="1.0"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                                Duration="{StaticResource ScrollAnimationDuration}"
+                                BeginTime="{StaticResource ScrollFocusAnimationDelay}"/>
                             <DoubleAnimation
                                 Storyboard.TargetName="PART_ButtonScrollUp"
                                 Storyboard.TargetProperty="Opacity"
-                                From="0.0"
                                 To="1.0"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                                Duration="{StaticResource ScrollAnimationDuration}" 
+                                BeginTime="{StaticResource ScrollFocusAnimationDelay}"/>
                             <DoubleAnimation
                                 Storyboard.TargetName="PART_ButtonScrollDown"
                                 Storyboard.TargetProperty="Opacity"
-                                From="0.0"
                                 To="1.0"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                                Duration="{StaticResource ScrollAnimationDuration}" 
+                                BeginTime="{StaticResource ScrollFocusAnimationDelay}"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </Trigger.EnterActions>
                 <Trigger.ExitActions>
                     <BeginStoryboard>
                         <Storyboard>
-                            <DoubleAnimation
-                                Storyboard.TargetName="PART_Track"
-                                Storyboard.TargetProperty="Width"
-                                From="10"
-                                To="6"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                            <ThicknessAnimation
+                                Storyboard.TargetName="PART_Thumb"
+                                Storyboard.TargetProperty="Padding"
+                                To="6,0,2,0"
+                                Duration="{StaticResource ScrollAnimationDuration}"
+                                BeginTime="{StaticResource ScrollUnfocusAnimationDelay}"/>
                             <DoubleAnimation
                                 Storyboard.TargetName="PART_Border"
                                 Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Opacity)"
-                                From="1.0"
                                 To="0.0"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                                Duration="{StaticResource ScrollAnimationDuration}"
+                                BeginTime="{StaticResource ScrollUnfocusAnimationDelay}" />
                             <DoubleAnimation
                                 Storyboard.TargetName="PART_ButtonScrollUp"
                                 Storyboard.TargetProperty="Opacity"
-                                From="1.0"
                                 To="0.0"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                                Duration="{StaticResource ScrollAnimationDuration}" 
+                                BeginTime="{StaticResource ScrollUnfocusAnimationDelay}"/>
                             <DoubleAnimation
                                 Storyboard.TargetName="PART_ButtonScrollDown"
                                 Storyboard.TargetProperty="Opacity"
-                                From="1.0"
                                 To="0.0"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                                Duration="{StaticResource ScrollAnimationDuration}" 
+                                BeginTime="{StaticResource ScrollUnfocusAnimationDelay}"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </Trigger.ExitActions>
@@ -263,23 +291,21 @@
                 Grid.Column="0"
                 VerticalAlignment="Center"
                 Command="ScrollBar.LineLeftCommand"
-                Content="{x:Static common:SymbolRegular.ChevronLeft24}"
+                Content="{x:Static common:SymbolRegular.CaretLeft20}"
                 Opacity="0"
                 Style="{StaticResource UiScrollBarLineButton}" />
             <Track
                 x:Name="PART_Track"
                 Grid.Column="1"
-                Height="6"
-                VerticalAlignment="Center"
                 IsDirectionReversed="False">
                 <Track.DecreaseRepeatButton>
                     <RepeatButton Command="ScrollBar.PageLeftCommand" Style="{StaticResource UiScrollBarPageButton}" />
                 </Track.DecreaseRepeatButton>
                 <Track.Thumb>
                     <Thumb
-                        Margin="0"
-                        Padding="0"
-                        Style="{StaticResource UiScrollBarThumb}" />
+                        x:Name="PART_Thumb"
+                        Style="{StaticResource UiScrollBarThumb}"
+                        Padding="0,6,0,2"/>
                 </Track.Thumb>
                 <Track.IncreaseRepeatButton>
                     <RepeatButton Command="ScrollBar.PageRightCommand" Style="{StaticResource UiScrollBarPageButton}" />
@@ -290,7 +316,7 @@
                 Grid.Column="2"
                 VerticalAlignment="Center"
                 Command="ScrollBar.LineRightCommand"
-                Content="{x:Static common:SymbolRegular.ChevronRight24}"
+                Content="{x:Static common:SymbolRegular.CaretRight20}"
                 Opacity="0"
                 Style="{StaticResource UiScrollBarLineButton}" />
         </Grid>
@@ -299,60 +325,60 @@
                 <Trigger.EnterActions>
                     <BeginStoryboard>
                         <Storyboard>
-                            <DoubleAnimation
-                                Storyboard.TargetName="PART_Track"
-                                Storyboard.TargetProperty="Height"
-                                From="6"
-                                To="10"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                            <ThicknessAnimation
+                                Storyboard.TargetName="PART_Thumb"
+                                Storyboard.TargetProperty="Padding"
+                                To="0,2,0,2"
+                                Duration="{StaticResource ScrollAnimationDuration}" 
+                                BeginTime="{StaticResource ScrollFocusAnimationDelay}"/>
                             <DoubleAnimation
                                 Storyboard.TargetName="PART_Border"
                                 Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Opacity)"
-                                From="0.0"
                                 To="1.0"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                                Duration="{StaticResource ScrollAnimationDuration}" 
+                                BeginTime="{StaticResource ScrollFocusAnimationDelay}"/>
                             <DoubleAnimation
                                 Storyboard.TargetName="PART_ButtonScrollLeft"
                                 Storyboard.TargetProperty="Opacity"
-                                From="0.0"
                                 To="1.0"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                                Duration="{StaticResource ScrollAnimationDuration}" 
+                                BeginTime="{StaticResource ScrollFocusAnimationDelay}"/>
                             <DoubleAnimation
                                 Storyboard.TargetName="PART_ButtonScrollRight"
                                 Storyboard.TargetProperty="Opacity"
-                                From="0.0"
                                 To="1.0"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                                Duration="{StaticResource ScrollAnimationDuration}" 
+                                BeginTime="{StaticResource ScrollFocusAnimationDelay}"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </Trigger.EnterActions>
                 <Trigger.ExitActions>
                     <BeginStoryboard>
                         <Storyboard>
-                            <DoubleAnimation
-                                Storyboard.TargetName="PART_Track"
-                                Storyboard.TargetProperty="Height"
-                                From="10"
-                                To="6"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                            <ThicknessAnimation
+                                Storyboard.TargetName="PART_Thumb"
+                                Storyboard.TargetProperty="Padding"
+                                To="0,6,0,2"
+                                Duration="{StaticResource ScrollAnimationDuration}" 
+                                BeginTime="{StaticResource ScrollUnfocusAnimationDelay}"/>
                             <DoubleAnimation
                                 Storyboard.TargetName="PART_Border"
                                 Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Opacity)"
-                                From="1.0"
                                 To="0.0"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                                Duration="{StaticResource ScrollAnimationDuration}" 
+                                BeginTime="{StaticResource ScrollUnfocusAnimationDelay}"/>
                             <DoubleAnimation
                                 Storyboard.TargetName="PART_ButtonScrollLeft"
                                 Storyboard.TargetProperty="Opacity"
-                                From="1.0"
                                 To="0.0"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                                Duration="{StaticResource ScrollAnimationDuration}" 
+                                BeginTime="{StaticResource ScrollUnfocusAnimationDelay}"/>
                             <DoubleAnimation
                                 Storyboard.TargetName="PART_ButtonScrollRight"
                                 Storyboard.TargetProperty="Opacity"
-                                From="1.0"
                                 To="0.0"
-                                Duration="{StaticResource ScrollAnimationDuration}" />
+                                Duration="{StaticResource ScrollAnimationDuration}" 
+                                BeginTime="{StaticResource ScrollUnfocusAnimationDelay}"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </Trigger.ExitActions>
@@ -369,11 +395,11 @@
         <Style.Triggers>
             <Trigger Property="Orientation" Value="Horizontal">
                 <Setter Property="Width" Value="Auto" />
-                <Setter Property="Height" Value="14" />
+                <Setter Property="Height" Value="10" />
                 <Setter Property="Template" Value="{StaticResource UiHorizontalScrollBar}" />
             </Trigger>
             <Trigger Property="Orientation" Value="Vertical">
-                <Setter Property="Width" Value="14" />
+                <Setter Property="Width" Value="10" />
                 <Setter Property="Height" Value="Auto" />
                 <Setter Property="Template" Value="{StaticResource UiVerticalScrollBar}" />
             </Trigger>

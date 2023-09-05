@@ -172,12 +172,14 @@
                 x:Name="RootTextBox"
                 Grid.Row="2"
                 Padding="0,6"
+                Margin="4"
                 Background="Transparent"
                 BorderThickness="0"
                 GotFocus="RootTextBox_OnGotFocus"
                 PreviewKeyUp="RootTextBox_OnPreviewKeyUp"
                 PreviewMouseDown="RootTextBox_OnPreviewMouseDown"
-                VerticalScrollBarVisibility="Visible">
+                VerticalScrollBarVisibility="Visible"
+                HorizontalScrollBarVisibility="Visible">
                 <RichTextBox.Document>
                     <FlowDocument FontFamily="{StaticResource DFontFamily}">
                         <FlowDocument.Blocks>
